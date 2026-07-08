@@ -15,16 +15,6 @@ else
   pfQuest.dburl = "https://www.wowhead.com/classic/quest="
 end
 
--- override global GetQuestLogTitle to return squished levels from DB
-local origGetQuestLogTitle = GetQuestLogTitle
-GetQuestLogTitle = function(questIndex)
-  local title, level, tag, suggestedGroup, isHeader, isCollapsed, isComplete, isDaily, questID, displayQuestID = origGetQuestLogTitle(questIndex)
-  if questID and pfDB and pfDB["quests"] and pfDB["quests"]["data"] and pfDB["quests"]["data"][questID] and pfDB["quests"]["data"][questID]["lvl"] then
-    level = tonumber(pfDB["quests"]["data"][questID]["lvl"])
-  end
-  return title, level, tag, suggestedGroup, isHeader, isCollapsed, isComplete, isDaily, questID, displayQuestID
-end
-
 function pfQuest:Debug(msg)
   -- only show debug output if enabled
   if not pfQuest_config.debug and pfQuest.debugwin then
@@ -101,6 +91,31 @@ pfQuest:SetScript("OnEvent", function()
       pfQuest:AddQuestLogIntegration()
       pfQuest:AddWorldMapIntegration()
       this.lock = GetTime() + 10
+
+      -- warn about ElvUI Enhanced quest level conflict
+      if IsAddOnLoaded("ElvUI_Enhanced") then
+        local ElvUI = _G["ElvUI"]
+        if ElvUI and ElvUI[1] then
+          local E = ElvUI[1]
+          if E and E.db and E.db.enhanced and E.db.enhanced.general and E.db.enhanced.general.showQuestLevel then
+            if not StaticPopupDialogs["PFQUEST_ELVUI_QUESTLEVEL"] then
+              StaticPopupDialogs["PFQUEST_ELVUI_QUESTLEVEL"] = {
+                text = format("|cffff8000%s|r detected a conflict:\n\nElvUI Enhanced |cffff8000(Quest Level)|r is overwriting quest log levels, causing incorrect level display.\n\nDisable ElvUI Enhanced quest level display?", "pfQuest-Triumvirate"),
+                button1 = YES,
+                button2 = NO,
+                OnAccept = function()
+                  E.db.enhanced.general.showQuestLevel = false
+                  ReloadUI()
+                end,
+                timeout = 0,
+                whileDead = 1,
+                hideOnEscape = 1,
+              }
+            end
+            StaticPopup_Show("PFQUEST_ELVUI_QUESTLEVEL")
+          end
+        end
+      end
     else
       return
     end
@@ -244,12 +259,17 @@ function pfQuest:UpdateQuestlog()
   -- iterate over all quests
   for qlogid=1,40 do
     local title, _, _, header, _, complete = compat.GetQuestLogTitle(qlogid)
+    local _, _, _, _, _, _, _, _, questID = GetQuestLogTitle(qlogid)
     local objectives = GetNumQuestLeaderBoards(qlogid)
     local watched, questid, state
 
     if title and not header then
-      questid = pfDatabase:GetQuestIDs(qlogid)
-      questid = questid and tonumber(questid[1]) or title
+      questid = questID
+      if not questid then
+        local ids = pfDatabase:GetQuestIDs(qlogid)
+        questid = ids and tonumber(ids[1])
+      end
+      questid = questid or title
       watched = IsQuestWatched(qlogid)
       state = watched and "track" or ""
 
@@ -605,64 +625,10 @@ AbandonQuest = function()
   HookAbandonQuest()
 end
 
-local function UpdateQuestLevel(button, id)
-  local title, level, tag, header = compat.GetQuestLogTitle(id)
-  if header or not title then return end
-  local _, _, _, _, _, _, _, _, questID = GetQuestLogTitle(id)
-  if questID and pfDB["quests"] and pfDB["quests"]["data"] and pfDB["quests"]["data"][questID] and pfDB["quests"]["data"][questID]["lvl"] then
-    level = tonumber(pfDB["quests"]["data"][questID]["lvl"])
-  end
-  local newtext = " [" .. ( level or "??" ) .. ( tag and "+" or "") .. "] " .. title
-  button:SetText(newtext)
-  if button.normalText then
-    button.normalText:SetText(newtext)
-  end
-  if not QuestLogTitleButton_Resize then return end
-  QuestLogTitleButton_Resize(button)
-end
-
--- single-shot reapply frame to catch late overwrites after QuestLog_Update
-local mlReapply = CreateFrame("Frame", nil, UIParent)
-mlReapply:Hide()
-mlReapply:SetScript("OnUpdate", function(self)
-  self:Hide()
-  for i, button in ipairs(QuestLogScrollFrame.buttons) do
-    if button:IsShown() and not button.isHeader then
-      local id = button:GetID()
-      local title, level, tag, header = compat.GetQuestLogTitle(id)
-      if not header and title then
-        local _, _, _, _, _, _, _, _, questID = GetQuestLogTitle(id)
-        if questID and pfDB["quests"] and pfDB["quests"]["data"] and pfDB["quests"]["data"][questID] and pfDB["quests"]["data"][questID]["lvl"] then
-          level = tonumber(pfDB["quests"]["data"][questID]["lvl"])
-        end
-        local newtext = " [" .. ( level or "??" ) .. ( tag and "+" or "") .. "] " .. title
-        button:SetText(newtext)
-        if button.normalText then
-          button.normalText:SetText(newtext)
-        end
-      end
-    end
-  end
-end)
-
 -- Update quest id button
 local pfHookQuestLog_Update = QuestLog_Update
 QuestLog_Update = function()
   pfHookQuestLog_Update()
-
-  if pfQuest_config["questloglevel"] == "1" then
-    if client >= 30300 then
-      for i, button in pairs(QuestLogScrollFrame.buttons) do
-        UpdateQuestLevel(button, button:GetID())
-      end
-    else
-      for i=1, QUESTS_DISPLAYED, 1 do
-        UpdateQuestLevel(_G["QuestLogTitle"..i], i + FauxScrollFrame_GetOffset(QuestLogListScrollFrame))
-      end
-    end
-  end
-
-  mlReapply:Show()
 
   if pfQuest_config["questlogbuttons"] ==  "1" then
     local questids = pfDatabase:GetQuestIDs(GetQuestLogSelection())

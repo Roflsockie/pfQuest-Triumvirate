@@ -351,8 +351,16 @@ function tracker.ButtonEvent(self)
     local qlogid = pfQuest.questlog[qid] and pfQuest.questlog[qid].qlogid or 0
     local qtitle, level, tag, header, collapsed, complete = compat.GetQuestLogTitle(qlogid)
     if not qlogid or not qtitle then return end
-    if qid and pfDB["quests"] and pfDB["quests"]["data"] and pfDB["quests"]["data"][qid] and pfDB["quests"]["data"][qid]["lvl"] then
-      level = tonumber(pfDB["quests"]["data"][qid]["lvl"])
+    if qid and pfDB["quests"] then
+      local lvl = pfDB["quests"]["data"] and pfDB["quests"]["data"][qid] and pfDB["quests"]["data"][qid]["lvl"]
+      if not lvl then
+        lvl = pfDB["quests"]["data-tbc"] and pfDB["quests"]["data-tbc"][qid] and pfDB["quests"]["data-tbc"][qid]["lvl"]
+      end
+      if lvl then
+        level = tonumber(lvl)
+      elseif level and level > 60 then
+        level = math.ceil(level * 60 / 80)
+      end
     end
     local objectives = GetNumQuestLeaderBoards(qlogid)
     local watched = IsQuestWatched(qlogid)

@@ -13,7 +13,31 @@ pfQuestCompat.rotateMinimap = client > 11200 and GetCVar("rotateMinimap") ~= "0"
 pfQuestCompat.client = client
 
 -- addon-compat: use and cache the original function if CTMod overwrites global API calls
-local GetQuestLogTitle = CT_QuestLevels_oldGetQuestLogTitle or GetQuestLogTitle
+local origGetQuestLogTitle = CT_QuestLevels_oldGetQuestLogTitle or GetQuestLogTitle
+
+-- expose full version (all returns, including questID) for quest log level squishing
+pfQuestCompat.GetQuestLogTitleFull = origGetQuestLogTitle
+
+-- override global GetQuestLogTitle to return squished levels; placed here (early load)
+-- so that addons loading later (like ElvUI Enhanced's quest level display) get correct levels
+_G.GetQuestLogTitle = function(questIndex)
+  local title, level, tag, group, isHeader, isCollapsed, isComplete, isDaily, questID = origGetQuestLogTitle(questIndex)
+  if questID then
+    local pfdb = _G["pfDB"]
+    if pfdb and pfdb["quests"] then
+      local lvl = pfdb["quests"]["data"] and pfdb["quests"]["data"][questID] and pfdb["quests"]["data"][questID]["lvl"]
+      if not lvl then
+        lvl = pfdb["quests"]["data-tbc"] and pfdb["quests"]["data-tbc"][questID] and pfdb["quests"]["data-tbc"][questID]["lvl"]
+      end
+      if lvl then
+        level = tonumber(lvl)
+      elseif level and level > 60 then
+        level = math.ceil(level * 60 / 80)
+      end
+    end
+  end
+  return title, level, tag, group, isHeader, isCollapsed, isComplete, isDaily, questID
+end
 
 -- tbc+wotlk: change behaviour of later expansions to the vanilla one
 pfQuestCompat.GetQuestLogTitle = function(id)
