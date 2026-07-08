@@ -1422,7 +1422,10 @@ function pfDatabase:QuestFilter(id, plevel, pclass, prace)
   if quests[id]["lvl"] and quests[id]["lvl"] < plevel - 4 and pfQuest_config["showlowlevel"] == "0" then return end
 
   -- hide highlevel quests (or show those that are 3 levels above)
-  if quests[id]["min"] and quests[id]["min"] > plevel + ( pfQuest_config["showhighlevel"] == "1" and 3 or 0 ) then return end
+  -- fallback to lvl if min is nil (many Northrend quests don't have min set)
+  local maxLevel = plevel + (pfQuest_config["showhighlevel"] == "1" and 3 or 0)
+  local qmin, qlvl = quests[id]["min"], quests[id]["lvl"]
+  if (qmin and qmin > maxLevel) or (not qmin and qlvl and qlvl > maxLevel) then return end
 
   -- hide event quests
   if quests[id]["event"] and pfQuest_config["showfestival"] == "0" then return end
