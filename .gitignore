@@ -1,0 +1,6 @@
+*.orig
+*.bak
+*~
+.DS_Store
+Thumbs.db
+gitrev.txt
