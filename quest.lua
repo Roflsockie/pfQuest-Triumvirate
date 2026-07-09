@@ -675,22 +675,60 @@ StaticPopupDialogs["PFQUEST_LEVEL_CONFLICT"] = {
   hideOnEscape = 1,
 }
 
--- Show level on quest log entries (как ElvUI Enhanced — 1 в 1)
+-- Show level on quest log entries
+-- Гибрид: .buttons (ElvUI) ИЛИ _G["QuestLogTitleButton"..i] (сток WotLK)
 if hooksecurefunc then
-  hooksecurefunc("QuestLog_Update", function()
+  local function ShowQuestLevels()
     if pfQuest_config["questloglevel"] ~= "1" then return end
-    if not QuestLogScrollFrame or not QuestLogScrollFrame.buttons then return end
 
-    local scrollOffset = HybridScrollFrame_GetOffset(QuestLogScrollFrame)
     local numEntries = GetNumQuestLogEntries()
+    if numEntries == 0 then return end
 
-    for i, questLogTitle in ipairs(QuestLogScrollFrame.buttons) do
+    -- Попытка 1: QuestLogScrollFrame.buttons (ElvUI QuestLog / Enhanced)
+    if QuestLogScrollFrame and QuestLogScrollFrame.buttons then
+      local scrollOffset = HybridScrollFrame_GetOffset(QuestLogScrollFrame)
+      for i, questLogTitle in ipairs(QuestLogScrollFrame.buttons) do
+        local questIndex = i + scrollOffset
+        if questIndex > numEntries then break end
+        local title, level, _, _, isHeader, _, _, _, questID = GetQuestLogTitle(questIndex)
+        if title and not isHeader then
+          local squished = level
+          if questID and pfDB and pfDB["quests"] then
+            local lvl = pfDB["quests"]["data"] and pfDB["quests"]["data"][questID] and pfDB["quests"]["data"][questID]["lvl"]
+            if not lvl then
+              lvl = pfDB["quests"]["data-tbc"] and pfDB["quests"]["data-tbc"][questID] and pfDB["quests"]["data-tbc"][questID]["lvl"]
+            end
+            if lvl then
+              squished = tonumber(lvl)
+            elseif level and level > 60 then
+              squished = math.ceil(level * 60 / 80)
+            end
+          end
+          if questLogTitle.groupMates and questLogTitle.groupMates:IsShown() then
+            questLogTitle.groupMates:Hide()
+          end
+          local color = GetQuestDifficultyColor(squished or level or 0)
+          questLogTitle:SetFormattedText("|cff%02x%02x%02x[%d]|r %s",
+            color.r*255, color.g*255, color.b*255, squished or level or 0, title)
+          if QuestLogTitleButton_Resize then
+            QuestLogTitleButton_Resize(questLogTitle)
+          end
+        end
+      end
+      return
+    end
+
+    -- Попытка 2: _G["QuestLogTitleButton"..i] (сток WotLK / без ElvUI)
+    local scrollFrame = EQL3_QuestLogListScrollFrame or ShaguQuest_QuestLogListScrollFrame or QuestLogListScrollFrame
+    if not scrollFrame then return end
+    local scrollOffset = FauxScrollFrame_GetOffset(scrollFrame)
+
+    for i = 1, NUM_QUESTLOG_ENTRIES or 35 do
       local questIndex = i + scrollOffset
       if questIndex > numEntries then break end
 
       local title, level, _, _, isHeader, _, _, _, questID = GetQuestLogTitle(questIndex)
       if title and not isHeader then
-        -- Squish как в ElvUI: pfDB → math → как есть
         local squished = level
         if questID and pfDB and pfDB["quests"] then
           local lvl = pfDB["quests"]["data"] and pfDB["quests"]["data"][questID] and pfDB["quests"]["data"][questID]["lvl"]
@@ -704,21 +742,34 @@ if hooksecurefunc then
           end
         end
 
-        -- groupMates (как ElvUI)
-        if questLogTitle.groupMates and questLogTitle.groupMates:IsShown() then
-          questLogTitle.groupMates:Hide()
+        -- Ищем текстовый объект кнопки (3 fallback как раньше)
+        local buttonName = "QuestLogTitleButton" .. i
+        local buttonText = _G[buttonName .. "Text"] or _G[(_G[buttonName] and _G[buttonName]:GetName() or "") .. "Text"]
+        if not buttonText then
+          local btn = _G[buttonName]
+          if btn then buttonText = btn:GetFontString() end
         end
 
-        local color = GetQuestDifficultyColor(squished or level or 0)
-        questLogTitle:SetFormattedText("|cff%02x%02x%02x[%d]|r %s",
-          color.r*255, color.g*255, color.b*255, squished or level or 0, title)
-
-        if QuestLogTitleButton_Resize then
-          QuestLogTitleButton_Resize(questLogTitle)
+        if buttonText then
+          local color = GetQuestDifficultyColor(squished or level or 0)
+          buttonText:SetFormattedText("|cff%02x%02x%02x[%d]|r %s",
+            color.r*255, color.g*255, color.b*255, squished or level or 0, title)
+          local btn = _G[buttonName]
+          if btn and QuestLogTitleButton_Resize then
+            QuestLogTitleButton_Resize(btn)
+          end
         end
       end
     end
-  end)
+  end
+
+  hooksecurefunc("QuestLog_Update", ShowQuestLevels)
+
+  -- Hook scrollbar too (как в ElvUI — уровни обновляются при скролле)
+  local scrollBar = QuestLogScrollFrame and QuestLogScrollFrameScrollBar
+  if scrollBar then
+    scrollBar:HookScript("OnValueChanged", ShowQuestLevels)
+  end
 end
 
 -- attach the new function to the scroll frame
