@@ -1,5 +1,21 @@
 # Changelog
 
+## 7.1.0-triumvirate-alpha (2026-07-09)
+
+### Added
+- **Wrath of the Lich King (Northrend) quest database**: 2,761 quests, 1,970 NPCs (1,557 with coords, 8,342 spawn points), and objects converted from Questie-335.
+- **Northrend zone locale entries** for `GetMapID` compatibility — quest markers now appear on the world map and minimap in all Northrend zones (Borean Tundra, Howling Fjord, Dragonblight, Grizzly Hills, Zul'Drak, Sholazar Basin, Storm Peaks, Icecrown, Wintergrasp, etc.).
+- **Quest level squishing for WotLK**: levels 68–80 are compressed to 51–60 using `ceil(lvl × 60 / 80)`, consistent with existing TBC squishing.
+- **`build/convert_wotlk.js`**: converter script that extracts WotLK data from Questie-335 and outputs pfQuest-format files with automatic logging (`logs/convert-wotlk-*.txt`).
+
+### Fixed
+- **Northrend quests filtered out on the map**: `race=0` in quest data caused all WotLK quests to be hidden by `QuestFilter` (Lua treats `0` as truthy). Removed `race=0` / `class=0` entries from generated data.
+- **ElvUI Enhanced conflict popup**: removed StaticPopup that warned about duplicate quest levels (no longer needed — ElvUI fixed upstream).
+
+### Changed
+- **.toc**: added `init\data-wotlk.xml` and `init\enUS-wotlk.xml` include entries for WotLK data loading.
+- **`database.lua`**: existing `-wotlk` patching loop (already present) now activates with the new data files — no code changes needed.
+
 ## 7.0.2-triumvirate-alpha (2026-07-08)
 
 ### Fixed
