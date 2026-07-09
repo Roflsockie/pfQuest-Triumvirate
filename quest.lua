@@ -91,6 +91,8 @@ pfQuest:SetScript("OnEvent", function()
       pfQuest:AddQuestLogIntegration()
       pfQuest:AddWorldMapIntegration()
       this.lock = GetTime() + 10
+      -- Schedule ElvUI conflict check after all addons initialize
+      pfQuest.levelCheckTimer = 3
 
     else
       return
@@ -124,6 +126,20 @@ end)
 pfQuest:SetScript("OnUpdate", function()
   if this.lock and this.lock > GetTime() then return end
   if not pfDatabase.localized then return end
+
+  -- Check for ElvUI Enhanced quest level conflict
+  if this.levelCheckTimer then
+    this.levelCheckTimer = this.levelCheckTimer - 0.05
+    if this.levelCheckTimer <= 0 then
+      this.levelCheckTimer = nil
+      if pfQuest_config["questloglevel"] == "1" then
+        local E = _G["ElvUI"] and _G["ElvUI"][1]
+        if E and E.db and E.db.enhanced and E.db.enhanced.general and E.db.enhanced.general.showQuestLevel then
+          StaticPopup_Show("PFQUEST_LEVEL_CONFLICT")
+        end
+      end
+    end
+  end
 
   if ( this.tick or .05) > GetTime() then return else this.tick = GetTime() + .05 end
 
@@ -630,52 +646,60 @@ QuestLog_Update = function()
   end
 end
 
--- Show level on quest log entries
--- Use hooksecurefunc to guarantee execution AFTER all other hooks (ElvUI Enhanced, etc.)
--- Guard: scroll frame may not exist when called early (e.g. ElvUI startup)
+-- Conflict resolution popup for ElvUI Enhanced quest level
+StaticPopupDialogs["PFQUEST_LEVEL_CONFLICT"] = {
+  text = "|cffffffffQuest Level display is enabled in both |cff33ffccpfQuest|r and |cffff33ElvUI Enhanced|r.\n\nWhich one would you like to use?",
+  button1 = "pfQuest",
+  button2 = "ElvUI",
+  OnAccept = function()
+    -- User chose pfQuest: disable ElvUI's version
+    local E = _G["ElvUI"] and _G["ElvUI"][1]
+    if E and E.db and E.db.enhanced then
+      E.db.enhanced.general.showQuestLevel = false
+      if E.GetModule then
+        local mod = E:GetModule("Enhanced_Misc")
+        if mod and mod.QuestLevelToggle then mod:QuestLevelToggle() end
+      end
+    end
+    pfQuest_config["questloglevel"] = "1"
+    QuestLog_Update()
+  end,
+  OnCancel = function()
+    -- User chose ElvUI: disable our version
+    pfQuest_config["questloglevel"] = "0"
+    DEFAULT_CHAT_FRAME:AddMessage("|cff33ffccpf|cffffffffQuest: Quest Level disabled. Use ElvUI Enhanced's option instead.")
+    QuestLog_Update()
+  end,
+  timeout = 0,
+  whileDead = 1,
+  hideOnEscape = 1,
+}
+
+-- Show level on quest log entries using QuestLogScrollFrame.buttons
+-- (same approach as ElvUI Enhanced, avoids _G name lookups)
 if hooksecurefunc then
   hooksecurefunc("QuestLog_Update", function()
     if pfQuest_config["questloglevel"] ~= "1" then return end
 
-    local scrollFrame = EQL3_QuestLogListScrollFrame or ShaguQuest_QuestLogListScrollFrame or QuestLogListScrollFrame
-    if not scrollFrame then return end
+    local scrollFrame = EQL3_QuestLogScrollFrame or QuestLogScrollFrame
+    if not scrollFrame or not scrollFrame.buttons then return end
 
+    local offset = HybridScrollFrame_GetOffset(scrollFrame)
     local _, numQuests = GetNumQuestLogEntries()
-    if not numQuests or numQuests == 0 then return end
 
-    local offset = FauxScrollFrame_GetOffset(scrollFrame)
-    local found = 0
-
-    for i = 1, 35 do
-      local button = _G["QuestLogTitleButton" .. i]
-      if not button or not button:IsShown() or button.isHeader then
-        -- skip hidden or header buttons, but continue loop to find all visible entries
-        goto continue
-      end
-
+    for i, button in ipairs(scrollFrame.buttons) do
       local questIndex = i + offset
+      if questIndex > numQuests then break end
+
       local title, level, _, isHeader = compat.GetQuestLogTitle(questIndex)
-      if not title or isHeader then goto continue end
-
-      -- Try to find the text-displaying child: button's own text, named child, or font string
-      local buttonText = _G["QuestLogTitleButton" .. i .. "Text"]
-      if not buttonText then
-        local btnName = button:GetName()
-        if btnName then buttonText = _G[btnName .. "Text"] end
+      if title and not isHeader then
+        local _, _, _, _, _, _, _, _, questID = GetQuestLogTitle(questIndex)
+        if level and tonumber(level) > 0 then
+          local color = pfQuestCompat.GetDifficultyColor(level)
+          button:SetFormattedText("|cff%02x%02x%02x[%d]|r %s",
+            color.r*255, color.g*255, color.b*255, level, title)
+        end
       end
-      if not buttonText then
-        buttonText = button:GetFontString()
-      end
-
-      if buttonText and level and tonumber(level) > 0 then
-        local color = pfQuestCompat.GetDifficultyColor(level)
-        buttonText:SetFormattedText("|cff%02x%02x%02x[%d]|r %s",
-          color.r*255, color.g*255, color.b*255, level, title)
-      end
-
-      ::continue::
-      found = found + 1
-      if found >= numQuests then break end
     end
   end)
 end
