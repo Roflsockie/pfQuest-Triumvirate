@@ -675,31 +675,46 @@ StaticPopupDialogs["PFQUEST_LEVEL_CONFLICT"] = {
   hideOnEscape = 1,
 }
 
--- Show level on quest log entries using QuestLogScrollFrame.buttons
--- Level comes from our overridden GetQuestLogTitle (already squished via pfDB).
--- Shows level for all quests; ElvUI-compatible approach.
+-- Show level on quest log entries (как ElvUI Enhanced — 1 в 1)
 if hooksecurefunc then
   hooksecurefunc("QuestLog_Update", function()
     if pfQuest_config["questloglevel"] ~= "1" then return end
+    if not QuestLogScrollFrame or not QuestLogScrollFrame.buttons then return end
 
-    local scrollFrame = EQL3_QuestLogScrollFrame or QuestLogScrollFrame
-    if not scrollFrame or not scrollFrame.buttons then return end
+    local scrollOffset = HybridScrollFrame_GetOffset(QuestLogScrollFrame)
+    local numEntries = GetNumQuestLogEntries()
 
-    local offset = HybridScrollFrame_GetOffset(scrollFrame)
-    local _, numQuests = GetNumQuestLogEntries()
+    for i, questLogTitle in ipairs(QuestLogScrollFrame.buttons) do
+      local questIndex = i + scrollOffset
+      if questIndex > numEntries then break end
 
-    for i, button in ipairs(scrollFrame.buttons) do
-      local questIndex = i + offset
-      if questIndex > numQuests then break end
+      local title, level, _, _, isHeader, _, _, _, questID = GetQuestLogTitle(questIndex)
+      if title and not isHeader then
+        -- Squish как в ElvUI: pfDB → math → как есть
+        local squished = level
+        if questID and pfDB and pfDB["quests"] then
+          local lvl = pfDB["quests"]["data"] and pfDB["quests"]["data"][questID] and pfDB["quests"]["data"][questID]["lvl"]
+          if not lvl then
+            lvl = pfDB["quests"]["data-tbc"] and pfDB["quests"]["data-tbc"][questID] and pfDB["quests"]["data-tbc"][questID]["lvl"]
+          end
+          if lvl then
+            squished = tonumber(lvl)
+          elseif level and level > 60 then
+            squished = math.ceil(level * 60 / 80)
+          end
+        end
 
-      -- Use overridden GetQuestLogTitle — level already squished via pfDB
-      local title, level, _, isHeader, _, _, _, _, _ = GetQuestLogTitle(questIndex)
-      if title and not isHeader and level and level > 0 then
-        local color = pfQuestCompat.GetDifficultyColor(level)
-        button:SetFormattedText("|cff%02x%02x%02x[%d]|r %s",
-          color.r*255, color.g*255, color.b*255, level, title)
+        -- groupMates (как ElvUI)
+        if questLogTitle.groupMates and questLogTitle.groupMates:IsShown() then
+          questLogTitle.groupMates:Hide()
+        end
+
+        local color = GetQuestDifficultyColor(squished or level or 0)
+        questLogTitle:SetFormattedText("|cff%02x%02x%02x[%d]|r %s",
+          color.r*255, color.g*255, color.b*255, squished or level or 0, title)
+
         if QuestLogTitleButton_Resize then
-          QuestLogTitleButton_Resize(button)
+          QuestLogTitleButton_Resize(questLogTitle)
         end
       end
     end
