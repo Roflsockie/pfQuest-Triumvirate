@@ -959,12 +959,12 @@ function pfMap:UpdateMinimap()
   local mapID = pfMap:GetMapIDByName(GetRealZoneText())
   local mapZoom = minimap_zoom[minimap_indoor()][mZoom]
   -- Fallback для зон без minimap_sizes (например, Northrend)
+  -- Используем константу (6000x4500), чтобы размер не плавал при зуме
   local mapWidth, mapHeight
   if minimap_sizes[mapID] then
     mapWidth, mapHeight = minimap_sizes[mapID][1], minimap_sizes[mapID][2]
   else
-    -- Используем mapZoom*20 как разумный дефолт (~6000 для zoom 0 outdoor)
-    mapWidth, mapHeight = mapZoom * 20, mapZoom * 20
+    mapWidth, mapHeight = 6000, 4500
   end
 
   local xScale = mapZoom / mapWidth
