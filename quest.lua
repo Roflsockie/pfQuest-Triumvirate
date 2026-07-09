@@ -92,30 +92,6 @@ pfQuest:SetScript("OnEvent", function()
       pfQuest:AddWorldMapIntegration()
       this.lock = GetTime() + 10
 
-      -- warn about ElvUI Enhanced quest level conflict
-      if IsAddOnLoaded("ElvUI_Enhanced") then
-        local ElvUI = _G["ElvUI"]
-        if ElvUI and ElvUI[1] then
-          local E = ElvUI[1]
-          if E and E.db and E.db.enhanced and E.db.enhanced.general and E.db.enhanced.general.showQuestLevel then
-            if not StaticPopupDialogs["PFQUEST_ELVUI_QUESTLEVEL"] then
-              StaticPopupDialogs["PFQUEST_ELVUI_QUESTLEVEL"] = {
-                text = format("|cffff8000%s|r detected a conflict:\n\nElvUI Enhanced |cffff8000(Quest Level)|r is overwriting quest log levels, causing incorrect level display.\n\nDisable ElvUI Enhanced quest level display?", "pfQuest-Triumvirate"),
-                button1 = YES,
-                button2 = NO,
-                OnAccept = function()
-                  E.db.enhanced.general.showQuestLevel = false
-                  ReloadUI()
-                end,
-                timeout = 0,
-                whileDead = 1,
-                hideOnEscape = 1,
-              }
-            end
-            StaticPopup_Show("PFQUEST_ELVUI_QUESTLEVEL")
-          end
-        end
-      end
     else
       return
     end
