@@ -958,8 +958,14 @@ function pfMap:UpdateMinimap()
   local color = pfQuest_config["spawncolors"] == "1" and "spawn" or "title"
   local mapID = pfMap:GetMapIDByName(GetRealZoneText())
   local mapZoom = minimap_zoom[minimap_indoor()][mZoom]
-  local mapWidth = minimap_sizes[mapID] and minimap_sizes[mapID][1] or 0
-  local mapHeight = minimap_sizes[mapID] and minimap_sizes[mapID][2] or 0
+  -- Fallback для зон без minimap_sizes (например, Northrend)
+  local mapWidth, mapHeight
+  if minimap_sizes[mapID] then
+    mapWidth, mapHeight = minimap_sizes[mapID][1], minimap_sizes[mapID][2]
+  else
+    -- Используем mapZoom*20 как разумный дефолт (~6000 для zoom 0 outdoor)
+    mapWidth, mapHeight = mapZoom * 20, mapZoom * 20
+  end
 
   local xScale = mapZoom / mapWidth
   local yScale = mapZoom / mapHeight
@@ -972,7 +978,7 @@ function pfMap:UpdateMinimap()
   -- refresh all nodes
   for addon, data in pairs(pfMap.nodes) do
     -- hide minimap nodes in continent view
-    if data[mapID] and minimap_sizes[mapID] and pfMap:HasMinimap(mapID) then
+    if data[mapID] and pfMap:HasMinimap(mapID) then
       for coords, node in pairs(data[mapID]) do
         local x, y
         if coord_cache[coords] then
