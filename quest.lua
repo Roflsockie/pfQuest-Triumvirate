@@ -606,34 +606,6 @@ local pfHookQuestLog_Update = QuestLog_Update
 QuestLog_Update = function()
   pfHookQuestLog_Update()
 
-  -- Show level on quest log entries
-  -- Guard: scroll frame may not exist when called early (e.g. ElvUI startup)
-  if pfQuest_config["questloglevel"] == "1" then
-    local scrollFrame = EQL3_QuestLogListScrollFrame or ShaguQuest_QuestLogListScrollFrame or QuestLogListScrollFrame
-    if scrollFrame then
-      local _, numQuests = GetNumQuestLogEntries()
-      local offset = FauxScrollFrame_GetOffset(scrollFrame)
-      local found = 0
-
-      for i = 1, 35 do
-        local button = _G["QuestLogTitleButton" .. i]
-        if button and button:IsShown() and not button.isHeader then
-          local questIndex = i + offset
-          local title, level, _, isHeader = compat.GetQuestLogTitle(questIndex)
-          if title and not isHeader then
-            local buttonText = _G["QuestLogTitleButton" .. i .. "Text"] or button:GetName() and _G[button:GetName() .. "Text"]
-            if buttonText and level and tonumber(level) > 0 then
-              local color = pfQuestCompat.GetDifficultyColor(level)
-              buttonText:SetFormattedText("|cff%02x%02x%02x[%d]|r %s", color.r*255, color.g*255, color.b*255, level, title)
-            end
-            found = found + 1
-            if found >= numQuests then break end
-          end
-        end
-      end
-    end
-  end
-
   if pfQuest_config["questlogbuttons"] ==  "1" then
     local questids = pfDatabase:GetQuestIDs(GetQuestLogSelection())
     if questids and questids[1] and tonumber(questids[1]) and pfQuest.questlog[questids[1]] then
@@ -656,6 +628,56 @@ QuestLog_Update = function()
       pfQuest.buttonHide:Disable()
     end
   end
+end
+
+-- Show level on quest log entries
+-- Use hooksecurefunc to guarantee execution AFTER all other hooks (ElvUI Enhanced, etc.)
+-- Guard: scroll frame may not exist when called early (e.g. ElvUI startup)
+if hooksecurefunc then
+  hooksecurefunc("QuestLog_Update", function()
+    if pfQuest_config["questloglevel"] ~= "1" then return end
+
+    local scrollFrame = EQL3_QuestLogListScrollFrame or ShaguQuest_QuestLogListScrollFrame or QuestLogListScrollFrame
+    if not scrollFrame then return end
+
+    local _, numQuests = GetNumQuestLogEntries()
+    if not numQuests or numQuests == 0 then return end
+
+    local offset = FauxScrollFrame_GetOffset(scrollFrame)
+    local found = 0
+
+    for i = 1, 35 do
+      local button = _G["QuestLogTitleButton" .. i]
+      if not button or not button:IsShown() or button.isHeader then
+        -- skip hidden or header buttons, but continue loop to find all visible entries
+        goto continue
+      end
+
+      local questIndex = i + offset
+      local title, level, _, isHeader = compat.GetQuestLogTitle(questIndex)
+      if not title or isHeader then goto continue end
+
+      -- Try to find the text-displaying child: button's own text, named child, or font string
+      local buttonText = _G["QuestLogTitleButton" .. i .. "Text"]
+      if not buttonText then
+        local btnName = button:GetName()
+        if btnName then buttonText = _G[btnName .. "Text"] end
+      end
+      if not buttonText then
+        buttonText = button:GetFontString()
+      end
+
+      if buttonText and level and tonumber(level) > 0 then
+        local color = pfQuestCompat.GetDifficultyColor(level)
+        buttonText:SetFormattedText("|cff%02x%02x%02x[%d]|r %s",
+          color.r*255, color.g*255, color.b*255, level, title)
+      end
+
+      ::continue::
+      found = found + 1
+      if found >= numQuests then break end
+    end
+  end)
 end
 
 -- attach the new function to the scroll frame
