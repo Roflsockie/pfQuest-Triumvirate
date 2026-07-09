@@ -167,3 +167,14 @@ if client <= 11200 then
     _G["ChatFrame"..i].AddMessage = ParseQuestLevels
   end
 end
+
+-- Fix LFD nil texture error: some private servers' LFDFrame.lua calls
+-- SetPortraitToTexture with nil (e.g. for dungeon rewards or boss portraits).
+-- The error: "SetPortraitToTexture(): Couldn't find texture named '(null)'"
+-- This hook guards against nil/noop so it doesn't throw.
+-- Affects custom WotLK client builds that extended LFDFrame.lua.
+local origSetPortrait = PlayerModel.SetPortraitToTexture
+PlayerModel.SetPortraitToTexture = function(self, texture)
+  if not texture then return end
+  return origSetPortrait(self, texture)
+end
