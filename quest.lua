@@ -676,7 +676,24 @@ StaticPopupDialogs["PFQUEST_LEVEL_CONFLICT"] = {
 }
 
 -- Show level on quest log entries using QuestLogScrollFrame.buttons
--- (same approach as ElvUI Enhanced, avoids _G name lookups)
+-- Uses questID to look up squished level in pfDB (like ElvUI Enhanced).
+-- Falls back to API level with math squish for quests not in our DB.
+-- Always shows a level (or ?? for unknown).
+local function GetSquishedLevel(level, questID)
+  if questID and pfDB and pfDB["quests"] then
+    local lvl = pfDB["quests"]["data"] and pfDB["quests"]["data"][questID] and pfDB["quests"]["data"][questID]["lvl"]
+    if not lvl then
+      lvl = pfDB["quests"]["data-tbc"] and pfDB["quests"]["data-tbc"][questID] and pfDB["quests"]["data-tbc"][questID]["lvl"]
+    end
+    if lvl then return tonumber(lvl) end
+  end
+  -- Not in pfDB: math squish
+  if level and level > 60 then
+    return math.ceil(level * 60 / 80)
+  end
+  return level
+end
+
 if hooksecurefunc then
   hooksecurefunc("QuestLog_Update", function()
     if pfQuest_config["questloglevel"] ~= "1" then return end
@@ -691,13 +708,17 @@ if hooksecurefunc then
       local questIndex = i + offset
       if questIndex > numQuests then break end
 
-      local title, level, _, isHeader = compat.GetQuestLogTitle(questIndex)
+      local title, level, _, isHeader, _, _, _, _, questID = GetQuestLogTitle(questIndex)
       if title and not isHeader then
-        local _, _, _, _, _, _, _, _, questID = GetQuestLogTitle(questIndex)
-        if level and tonumber(level) > 0 then
-          local color = pfQuestCompat.GetDifficultyColor(level)
+        local squished = GetSquishedLevel(level, questID)
+        local displayLevel = squished or level
+        if displayLevel and tonumber(displayLevel) > 0 then
+          local color = pfQuestCompat.GetDifficultyColor(displayLevel)
           button:SetFormattedText("|cff%02x%02x%02x[%d]|r %s",
-            color.r*255, color.g*255, color.b*255, level, title)
+            color.r*255, color.g*255, color.b*255, displayLevel, title)
+          if QuestLogTitleButton_Resize then
+            QuestLogTitleButton_Resize(button)
+          end
         end
       end
     end
