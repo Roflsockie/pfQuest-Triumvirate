@@ -751,7 +751,6 @@ if hooksecurefunc then
           local color = GetQuestDifficultyColor(squished or level or 0)
           buttonText:SetFormattedText("|cff%02x%02x%02x[%d]|r %s",
             color.r*255, color.g*255, color.b*255, squished or level or 0, title)
-          local btn = _G[buttonName]
           if btn and QuestLogTitleButton_Resize then
             QuestLogTitleButton_Resize(btn)
           end
