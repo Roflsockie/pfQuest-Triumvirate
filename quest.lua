@@ -607,25 +607,28 @@ QuestLog_Update = function()
   pfHookQuestLog_Update()
 
   -- Show level on quest log entries
+  -- Guard: scroll frame may not exist when called early (e.g. ElvUI startup)
   if pfQuest_config["questloglevel"] == "1" then
-    local _, numQuests = GetNumQuestLogEntries()
     local scrollFrame = EQL3_QuestLogListScrollFrame or ShaguQuest_QuestLogListScrollFrame or QuestLogListScrollFrame
-    local offset = FauxScrollFrame_GetOffset(scrollFrame)
-    local found = 0
+    if scrollFrame then
+      local _, numQuests = GetNumQuestLogEntries()
+      local offset = FauxScrollFrame_GetOffset(scrollFrame)
+      local found = 0
 
-    for i = 1, 35 do
-      local button = _G["QuestLogTitleButton" .. i]
-      if button and button:IsShown() and not button.isHeader then
-        local questIndex = i + offset
-        local title, level, _, isHeader = compat.GetQuestLogTitle(questIndex)
-        if title and not isHeader then
-          local buttonText = _G["QuestLogTitleButton" .. i .. "Text"] or button:GetName() and _G[button:GetName() .. "Text"]
-          if buttonText and level and tonumber(level) > 0 then
-            local color = pfQuestCompat.GetDifficultyColor(level)
-            buttonText:SetFormattedText("|cff%02x%02x%02x[%d]|r %s", color.r*255, color.g*255, color.b*255, level, title)
+      for i = 1, 35 do
+        local button = _G["QuestLogTitleButton" .. i]
+        if button and button:IsShown() and not button.isHeader then
+          local questIndex = i + offset
+          local title, level, _, isHeader = compat.GetQuestLogTitle(questIndex)
+          if title and not isHeader then
+            local buttonText = _G["QuestLogTitleButton" .. i .. "Text"] or button:GetName() and _G[button:GetName() .. "Text"]
+            if buttonText and level and tonumber(level) > 0 then
+              local color = pfQuestCompat.GetDifficultyColor(level)
+              buttonText:SetFormattedText("|cff%02x%02x%02x[%d]|r %s", color.r*255, color.g*255, color.b*255, level, title)
+            end
+            found = found + 1
+            if found >= numQuests then break end
           end
-          found = found + 1
-          if found >= numQuests then break end
         end
       end
     end
