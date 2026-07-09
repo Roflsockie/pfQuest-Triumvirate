@@ -50,6 +50,35 @@ SlashCmdList["PFDB"] = function(input, editbox)
 
   -- argument: debug
   if (arg1 == "debug") then
+    -- subcommand: debug minimap — show minimap config & pin state
+    if (arg2 == "minimap" or commandlist[2] == "minimap") then
+      DEFAULT_CHAT_FRAME:AddMessage("|cff33ffccpf|cffffffffQuest Minimap Debug:")
+      DEFAULT_CHAT_FRAME:AddMessage("  showspawnmini = |cff33ffcc" .. tostring(pfQuest_config["showspawnmini"]) .. "|r (default: 1)")
+      DEFAULT_CHAT_FRAME:AddMessage("  showspawn = |cff33ffcc" .. tostring(pfQuest_config["showspawn"]) .. "|r (world map)")
+      DEFAULT_CHAT_FRAME:AddMessage("  showclustermini = |cff33ffcc" .. tostring(pfQuest_config["showclustermini"]) .. "|r")
+      DEFAULT_CHAT_FRAME:AddMessage("  minimapnodes = |cff33ffcc" .. tostring(pfQuest_config["minimapnodes"]) .. "|r")
+      local zoneText = GetRealZoneText()
+      local mapID = pfMap:GetMapIDByName(zoneText)
+      DEFAULT_CHAT_FRAME:AddMessage("  zone = |cff33ffcc" .. (zoneText or "?") .. "|r (mapID: " .. tostring(mapID) .. ")")
+      local hasSize = mapID and pfDB["minimap"] and pfDB["minimap"][mapID] and "yes" or "no"
+      DEFAULT_CHAT_FRAME:AddMessage("  minimap_sizes[mapID] = " .. hasSize)
+      local pfCount, otherCount = 0, 0
+      for addon, data in pairs(pfMap.nodes) do
+        if data[mapID] then
+          for _,_ in pairs(data[mapID]) do
+            if addon == "PFQUEST" then pfCount = pfCount + 1 else otherCount = otherCount + 1 end
+          end
+        end
+      end
+      DEFAULT_CHAT_FRAME:AddMessage("  nodes in zone: |cff33ffcc" .. pfCount .. "|r PFQUEST + |cff33ffcc" .. otherCount .. "|r other")
+      local mpinCount = 0
+      for _, pin in ipairs(pfMap.mpins) do
+        if pin:IsShown() then mpinCount = mpinCount + 1 end
+      end
+      DEFAULT_CHAT_FRAME:AddMessage("  visible minimap pins: |cff33ffcc" .. mpinCount .. "|r / " .. table.getn(pfMap.mpins or {}))
+      return
+    end
+
     pfQuest_config.debug = not pfQuest_config.debug
     DEFAULT_CHAT_FRAME:AddMessage("|cff33ffccpf|cffffffffQuest Debug Mode: " .. ( pfQuest_config.debug and "|cff33ff33ON" or "|cffff3333OFF" ))
     pfQuest:Debug("Debug Mode Changed")
