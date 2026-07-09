@@ -1,5 +1,25 @@
 # Changelog
 
+## 7.2.0-triumvirate-alpha (2026-07-09)
+
+### Added
+- **Minimap support for Northrend zones**: `UpdateMinimap` no longer requires `minimap_sizes[mapID]` — uses fallback `{6000, 4500}` for zones without minimap data. Fixes object markers (gear icons) not showing on the minimap in Borean Tundra, Howling Fjord, Dragonblight, etc.
+- **`/pfquest debug minimap` command**: prints current config values (`showspawnmini`, `showspawn`, `showclustermini`, `minimapnodes`), zone mapID, node counts, and visible pin count for debugging minimap issues.
+- **Quest level display on quest log**: new `hooksecurefunc`-based implementation with dual lookup — `QuestLogScrollFrame.buttons` (ElvUI style) or `_G["QuestLogTitleButton"..i]` fallback (stock WotLK). Includes scrollbar `HookScript` for live updates on scroll.
+- **ElvUI Enhanced conflict detection popup**: when both pfQuest's `questloglevel` and ElvUI's `showQuestLevel` are enabled, a popup lets the user choose which one to keep.
+
+### Fixed
+- **Minimap markers sliding at different zoom levels**: replaced zoom-dependent `mapZoom * 20` fallback with constant `{6000, 4500}` — markers now stay in place regardless of zoom.
+- **`SetPortraitToTexture(nil)` crash in LFD**: deferred `PlayerModel.SetPortraitToTexture` hook via `ADDON_LOADED` event + `pcall` fallback on `LFDDungeonReadyDialogReward_SetReward`.
+- **`questloglevel` nil scrollFrame crash**: added nil-guard for when `QuestLog_Update` is called by ElvUI before the scroll frame exists.
+- **Double `local btn` variable shadow** in quest log level fallback path — cleaned up.
+- **Object coordinate parsing**: wotlkObjectDB spawns stored in field 4, not field 7 — now 93 objects with real coordinates appear on the map.
+
+### Changed
+- **questloglevel rewritten**: multiple iterations to resolve ElvUI hook conflicts, culminating in hybrid `QuestLogScrollFrame.buttons` + `_G["QuestLogTitleButton"..i]` approach.
+- **Minimap code in `map.lua`**: removed `minimap_sizes[mapID]` requirement from zone iteration — any zone with node data renders minimap pins regardless of database entries.
+- **Quest text fallback cleaned up**: removed redundant `_G[GetName()]` expression, uses simpler `btn:GetFontString()` fallback.
+
 ## 7.1.0-triumvirate-alpha (2026-07-09)
 
 ### Added
