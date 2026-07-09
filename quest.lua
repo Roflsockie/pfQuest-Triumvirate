@@ -742,13 +742,10 @@ if hooksecurefunc then
           end
         end
 
-        -- Ищем текстовый объект кнопки (3 fallback как раньше)
+        -- Ищем текстовый объект кнопки
         local buttonName = "QuestLogTitleButton" .. i
-        local buttonText = _G[buttonName .. "Text"] or _G[(_G[buttonName] and _G[buttonName]:GetName() or "") .. "Text"]
-        if not buttonText then
-          local btn = _G[buttonName]
-          if btn then buttonText = btn:GetFontString() end
-        end
+        local btn = _G[buttonName]
+        local buttonText = _G[buttonName .. "Text"] or (btn and btn:GetFontString())
 
         if buttonText then
           local color = GetQuestDifficultyColor(squished or level or 0)
