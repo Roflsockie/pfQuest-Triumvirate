@@ -171,10 +171,28 @@ end
 -- Fix LFD nil texture error: some private servers' LFDFrame.lua calls
 -- SetPortraitToTexture with nil (e.g. for dungeon rewards or boss portraits).
 -- The error: "SetPortraitToTexture(): Couldn't find texture named '(null)'"
--- This hook guards against nil/noop so it doesn't throw.
--- Affects custom WotLK client builds that extended LFDFrame.lua.
-local origSetPortrait = PlayerModel.SetPortraitToTexture
-PlayerModel.SetPortraitToTexture = function(self, texture)
-  if not texture then return end
-  return origSetPortrait(self, texture)
+-- PlayerModel may be nil at load time on some client builds, so use
+-- a deferred hook + fallback pcall wrapper on the reward function itself.
+
+-- Deferred hook for PlayerModel.SetPortraitToTexture
+local lfdFixFrame = CreateFrame("Frame")
+lfdFixFrame:RegisterEvent("ADDON_LOADED")
+lfdFixFrame:SetScript("OnEvent", function(self, event, addon)
+  if PlayerModel and PlayerModel.SetPortraitToTexture then
+    local orig = PlayerModel.SetPortraitToTexture
+    PlayerModel.SetPortraitToTexture = function(self, texture)
+      if not texture then return end
+      return orig(self, texture)
+    end
+    self:UnregisterAllEvents()
+  end
+end)
+
+-- Fallback: wrap the function in pcall so nil texture errors are suppressed
+-- even if PlayerModel hook never applies
+if LFDDungeonReadyDialogReward_SetReward then
+  local origRewardFunc = LFDDungeonReadyDialogReward_SetReward
+  LFDDungeonReadyDialogReward_SetReward = function(...)
+    local ok = pcall(origRewardFunc, ...)
+  end
 end
