@@ -1,7 +1,12 @@
 <Ui xmlns="http://www.blizzard.com/wow/ui/">
   <Include file="..\db\items-wotlk.lua"/>
-  <Include file="..\db\quests-wotlk.lua"/>
   <Include file="..\db\units-wotlk.lua"/>
   <Include file="..\db\objects-wotlk.lua"/>
+  <Include file="..\db\refloot-wotlk.lua"/>
+  <Include file="..\db\quests-itemreq-wotlk.lua"/>
+  <Include file="..\db\quests-wotlk.lua"/>
   <Include file="..\db\zones-wotlk.lua"/>
+  <Include file="..\db\minimap-wotlk.lua"/>
+  <Include file="..\db\areatrigger-wotlk.lua"/>
+  <Include file="..\db\meta-wotlk.lua"/>
 </Ui>

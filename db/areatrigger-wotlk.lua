@@ -1,0 +1,1 @@
+pfDB["areatrigger"]["data-wotlk"] = {}
