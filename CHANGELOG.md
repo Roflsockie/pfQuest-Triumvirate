@@ -1,5 +1,6 @@
 # Changelog
 
+<<<<<<< HEAD
 ## 7.2.0-triumvirate-alpha (2026-07-09)
 
 ### Added
@@ -19,6 +20,26 @@
 - **questloglevel rewritten**: multiple iterations to resolve ElvUI hook conflicts, culminating in hybrid `QuestLogScrollFrame.buttons` + `_G["QuestLogTitleButton"..i]` approach.
 - **Minimap code in `map.lua`**: removed `minimap_sizes[mapID]` requirement from zone iteration — any zone with node data renders minimap pins regardless of database entries.
 - **Quest text fallback cleaned up**: removed redundant `_G[GetName()]` expression, uses simpler `btn:GetFontString()` fallback.
+=======
+## 7.1.1-triumvirate-alpha (2026-07-18)
+
+### Fixed
+- **Outland quests not showing on map**: `enUS/zones-wotlk.lua` contained entries with zone IDs
+  that belong to TBC zones (3430=Eversong Woods, 3433=Ghostlands, 3483=Hellfire Peninsula,
+  3518=Nagrand, 3520=Zangarmarsh, 3521=Terokkar Forest, 3524=Blade's Edge Mountains).
+  The `-wotlk` patching pass overwrote correct TBC zone names with WotLK names, breaking
+  zone lookups for all Outland content. Removed conflicting entries.
+- **Northrend zone coordinate data missing**: `db/zones-wotlk.lua` did not exist — only locale
+  names were present in `enUS/zones-wotlk.lua`. Without zone coordinate data (parent map,
+  width, height, x, y), `SearchZoneID()` could not position any Northrend zone markers on
+  the world map. Created `db/zones-wotlk.lua` with coordinate data for all Northrend zones
+  and subzones.
+- **`init/data-wotlk.xml` missing zones include**: Added `zones-wotlk.lua` to the WotLK
+  data loading XML so the zone coordinate data is loaded at startup.
+- **`client.lua` GetQuestLogTitle override not checking WotLK data**: Added `data-wotlk`
+  as a third fallback lookup after `data-tbc`, ensuring squished WotLK quest levels are
+  used even when the main `data` table doesn't have the entry.
+>>>>>>> 3b42bb1 (Fix Outland/Northrend broken: zone conflicts, missing zone coords, level squish fallback)
 
 ## 7.1.0-triumvirate-alpha (2026-07-09)
 

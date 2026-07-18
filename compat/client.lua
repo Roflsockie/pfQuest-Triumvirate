@@ -29,6 +29,9 @@ _G.GetQuestLogTitle = function(questIndex)
       if not lvl then
         lvl = pfdb["quests"]["data-tbc"] and pfdb["quests"]["data-tbc"][questID] and pfdb["quests"]["data-tbc"][questID]["lvl"]
       end
+      if not lvl then
+        lvl = pfdb["quests"]["data-wotlk"] and pfdb["quests"]["data-wotlk"][questID] and pfdb["quests"]["data-wotlk"][questID]["lvl"]
+      end
       if lvl then
         level = tonumber(lvl)
       elseif level and level > 60 then

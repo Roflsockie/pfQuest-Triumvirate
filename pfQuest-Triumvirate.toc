@@ -3,7 +3,7 @@
 ## Author: Shagu (original), -Neayo- (Triumvirate fork)
 ## Notes: A Questhelper and Database — Triumvirate fork with squished (1-60) quest levels
 ## Notes-ruRU: Облегченный помощник заданий и база данных — форк Triumvirate со сжатыми (1-60) уровнями квестов
-## Version: 7.0.1-triumvirate-alpha
+## Version: 7.1.1-triumvirate-alpha
 ## OptionalDeps: pfUI-wotlk
 ## SavedVariables: pfQuest_questcache
 ## SavedVariablesPerCharacter: pfQuest_config, pfBrowser_fav, pfQuest_history, pfQuest_colors, pfQuest_server, pfQuest_track

@@ -3,4 +3,5 @@
   <Include file="..\db\quests-wotlk.lua"/>
   <Include file="..\db\units-wotlk.lua"/>
   <Include file="..\db\objects-wotlk.lua"/>
+  <Include file="..\db\zones-wotlk.lua"/>
 </Ui>
